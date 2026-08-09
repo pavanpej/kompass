@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/logo.svg" width="96" height="96" alt="Kompass logo">
+</p>
+
 # Kompass
 
 A minimalist Android compass + bubble level app, plus a growing set of related sensor/location
