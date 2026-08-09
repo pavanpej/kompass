@@ -135,10 +135,13 @@ comments before re-enabling any of them. Auto-fix most things with `./ktlint -F 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | [`ci.yml`](.github/workflows/ci.yml) | push to `main`, every PR | ktlint → Android Lint → unit tests → Jacoco coverage report (uploaded as an artifact) → `assembleDebug` → uploads the debug APK as a build artifact. A second job, PR-only, warns (doesn't block) if `AndroidManifest.xml` gains a new `<uses-permission>`, as a nudge to keep the table above honest. |
-| [`codeql.yml`](.github/workflows/codeql.yml) | push/PR to `main`, weekly | GitHub's CodeQL security scan for Kotlin/Java. |
+| [`codeql.yml`](.github/workflows/codeql.yml) | push/PR to `main`, weekly | GitHub's CodeQL security scan for Kotlin/Java. Requires the repo to be public (or GitHub Advanced Security on a paid plan) — code scanning results-upload fails otherwise. |
 | [`release.yml`](.github/workflows/release.yml) | push of a `v*` tag | Builds a **signed** release APK (needs the four `RELEASE_KEYSTORE_*`/`RELEASE_KEY_*` repo secrets — see docs/ARCHITECTURE.md), derives `versionName`/`versionCode` from the tag, creates a GitHub Release with the APK attached and auto-generated notes. |
 
 [`.github/dependabot.yml`](.github/dependabot.yml) — monthly dependency-update PRs for Gradle
 (`libs.versions.toml`) and GitHub Actions versions.
+
+Branch protection on `main` requires **`CI / build-and-test`** to pass before merging — the one
+job worth gating on; see `docs/ARCHITECTURE.md` for why not every job/workflow is required.
 
 No instrumented/Compose UI tests run in CI yet — see docs/TESTING.md's "Not covered, and why".

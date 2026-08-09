@@ -321,6 +321,22 @@ Four files, split by concern rather than one mega-workflow:
 - **`.github/dependabot.yml`** — not a workflow (lives in `.github/`, not `.github/workflows/`),
   monthly-interval dependency PRs for both the `gradle` and `github-actions` ecosystems.
 
+**Repo visibility is load-bearing for two of these.** CodeQL's `analyze` step scans fine
+regardless, but *uploading* results to GitHub's code scanning UI needs GitHub Advanced Security,
+which isn't available for private repos on the free plan ("Code scanning is not enabled for this
+repository" — confirmed by actually running it against this repo while it was briefly private).
+Branch protection with required status checks has the identical public-repo-or-paid-plan
+constraint. This repo is public specifically so both of these work; if it ever goes private again,
+expect both to break the same way, not as a new bug.
+
+`main` currently requires only the **`CI / build-and-test`** status check to pass before merging
+(`gh api repos/.../branches/main/protection`). Deliberately not required:
+`CI / permission-check` (it's designed to always pass — see above, it only posts a warning
+annotation, never fails — so requiring it is a no-op) and `CodeQL / Analyze` (the job succeeds
+once it runs regardless of what it finds; findings surface as separate code-scanning alerts to
+review manually, not as this check failing, so requiring it only guarantees the scan *ran* on
+every PR, not that the code is clean).
+
 ### Release signing
 
 `app/build.gradle.kts`'s `signingConfigs { create("release") { ... } }` block reads four
