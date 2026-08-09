@@ -111,7 +111,13 @@ fun CompassDial(
                 for (deg in 0 until 360 step 10) {
                     val isMajor = deg % 90 == 0
                     val isMid = deg % 30 == 0
-                    val tickLength = if (isMajor) 18.dp.toPx() else if (isMid) 12.dp.toPx() else 6.dp.toPx()
+                    val tickLength = if (isMajor) {
+                        18.dp.toPx()
+                    } else if (isMid) {
+                        12.dp.toPx()
+                    } else {
+                        6.dp.toPx()
+                    }
                     val angleRad = Math.toRadians((deg - 90).toDouble())
                     val outer = Offset(
                         center.x + radius * cos(angleRad).toFloat(),

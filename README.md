@@ -111,6 +111,18 @@ of seconds. See **[docs/TESTING.md](docs/TESTING.md)** for the testing philosoph
 paired-test convention for new logic, and a full human-auditable directory of every test file and
 what it covers.
 
+## Code style
+
+```bash
+JAVA_HOME="/c/Program Files/Android/Android Studio/jbr" PATH="/c/Program Files/Android/Android Studio/jbr/bin:$PATH" ./ktlint "app/src/**/*.kt"
+```
+[ktlint](https://pinterest.github.io/ktlint/), CI-enforced (see below). Style-preference rules
+that fight this codebase's actual conventions (one-parameter-per-line signatures, mandatory
+trailing commas, the `Color.kt`→`KompassColors.kt` filename rule, line-length limits that would
+fight this project's deliberately long descriptive test names) are turned off in
+**[.editorconfig](.editorconfig)** rather than mass-reformatted to match — read that file's
+comments before re-enabling any of them. Auto-fix most things with `./ktlint -F "app/src/**/*.kt"`.
+
 ## Permissions
 
 | Permission | Why |
@@ -120,5 +132,13 @@ what it covers.
 
 ## CI / GitHub Actions
 
-**Not set up yet.** No `.github/workflows` directory exists. A workflow to build a debug APK per
-commit is planned but not yet implemented — do not assume CI exists or is validating anything.
+| Workflow | Trigger | What it does |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | push to `main`, every PR | ktlint → Android Lint → unit tests → Jacoco coverage report (uploaded as an artifact) → `assembleDebug` → uploads the debug APK as a build artifact. A second job, PR-only, warns (doesn't block) if `AndroidManifest.xml` gains a new `<uses-permission>`, as a nudge to keep the table above honest. |
+| [`codeql.yml`](.github/workflows/codeql.yml) | push/PR to `main`, weekly | GitHub's CodeQL security scan for Kotlin/Java. |
+| [`release.yml`](.github/workflows/release.yml) | push of a `v*` tag | Builds a **signed** release APK (needs the four `RELEASE_KEYSTORE_*`/`RELEASE_KEY_*` repo secrets — see docs/ARCHITECTURE.md), derives `versionName`/`versionCode` from the tag, creates a GitHub Release with the APK attached and auto-generated notes. |
+
+[`.github/dependabot.yml`](.github/dependabot.yml) — monthly dependency-update PRs for Gradle
+(`libs.versions.toml`) and GitHub Actions versions.
+
+No instrumented/Compose UI tests run in CI yet — see docs/TESTING.md's "Not covered, and why".

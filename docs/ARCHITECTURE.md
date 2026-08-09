@@ -303,6 +303,93 @@ principle for this app going forward: prefer `Scaffold` slots, `weight()`, and s
 containers over fixed `dp` offsets when positioning things — the explicit product requirement is
 that the UI adapts to all screen sizes, not just the one device it was built against.**
 
+### CI pipeline
+
+Four files, split by concern rather than one mega-workflow:
+
+- **`.github/workflows/ci.yml`** — runs on every push to `main` and every PR. ktlint → Android
+  Lint → unit tests → Jacoco coverage report (uploaded as an artifact, not gated on a threshold
+  yet) → `assembleDebug` → uploads the debug APK as a build artifact. A separate PR-only job
+  diffs `AndroidManifest.xml` against the base branch and posts a non-blocking `::warning::`
+  annotation if a new `<uses-permission>` shows up, so it's never silently added without the
+  README's permissions table being updated to match.
+- **`.github/workflows/codeql.yml`** — kept separate from `ci.yml` because it has its own
+  independent schedule (push/PR to `main` *plus* a weekly cron), not just a push/PR trigger.
+- **`.github/workflows/release.yml`** — triggers on pushing a `v*` tag. Builds a **signed**
+  release APK and creates a GitHub Release with it attached. See "Release signing" below for how
+  signing actually works, and "Version-from-tag" for where `versionName`/`versionCode` come from.
+- **`.github/dependabot.yml`** — not a workflow (lives in `.github/`, not `.github/workflows/`),
+  monthly-interval dependency PRs for both the `gradle` and `github-actions` ecosystems.
+
+### Release signing
+
+`app/build.gradle.kts`'s `signingConfigs { create("release") { ... } }` block reads four
+environment variables (`RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`,
+`RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) and, **only if they're present**, decodes the
+base64'd keystore to a file under the build directory and wires up signing for the `release`
+build type. If they're absent (any local build, or a CI run without the secrets configured),
+`assembleRelease` still succeeds -- it just produces `app-release-unsigned.apk` instead of
+`app-release.apk` (verified locally: this is the actual AGP output-naming behavior, not a guess).
+`release.yml` is the only workflow that sets these, from four GitHub Actions repo secrets of the
+same names. The actual keystore file lives outside this repo entirely, on the maintainer's
+machine (backed up separately) -- **never commit a real keystore**; `.gitignore` blocks `*.jks`/
+`*.keystore`/`keystore.properties` as a backstop regardless of where one gets created.
+
+### Version-from-tag
+
+`defaultConfig`'s `versionCode`/`versionName` read from Gradle project properties
+(`-PreleaseVersionCode=`/`-PreleaseVersionName=`) with the current hardcoded values (`1`/`"1.0"`)
+as fallback defaults for local/debug builds. `release.yml` derives these from the pushed tag
+itself (`versionName` = tag with the leading `v` stripped, e.g. `v1.2.0` → `1.2.0`; `versionCode`
+= the GitHub Actions run number, which is guaranteed monotonically increasing) and passes them as
+those properties -- so cutting a release never requires a manual version-bump commit to this file.
+
+### Jacoco coverage report task
+
+`jacocoTestReport` in `app/build.gradle.kts` is a hand-registered `JacocoReport` task (AGP has no
+one-line "just give me a coverage report" API for a Compose project). One specific pitfall hit
+and fixed while wiring it up: the task's `executionData` was originally globbed across the
+*entire* build directory (`fileTree(layout.buildDirectory.get()) { include("**/*.exec") } }`),
+which Gradle 9's stricter task-validation flags as an **undeclared implicit dependency** -- the
+glob happened to also match outputs from unrelated tasks (asset merging, dexing) that
+`jacocoTestReport` never declared a dependency on, so Gradle couldn't guarantee correct task
+ordering. Fixed by scoping `executionData` to exactly
+`outputs/unit_test_code_coverage/debugUnitTest/` -- the specific directory `testDebugUnitTest`
+(an explicit `dependsOn`) writes its `.exec` file to, and nothing else touches. **If you add
+another coverage-consuming task later, scope its file trees narrowly the same way** rather than
+globbing the whole build directory "to be safe" -- that's exactly backwards for Gradle's
+validation.
+
+### Retrofitting ktlint onto an existing codebase
+
+Running ktlint 1.5.0 with its bare default ruleset against the pre-existing codebase produced
+~150 violations across nearly every file -- not because the code was inconsistent, but because
+ktlint 1.x's default style is opinionated in ways that don't match how this project was actually
+written: one-parameter-per-line function signatures, mandatory trailing commas on every call site,
+forced line breaks for any multiline expression. Reformatting the entire codebase to match would
+have been a large, purely-cosmetic diff unrelated to any real bug or inconsistency.
+
+Instead, `.editorconfig` disables that specific set of style-preference rules (each with a comment
+explaining why), while keeping the rules that catch genuine consistency issues: import ordering,
+no wildcard imports, final newlines, indentation, spacing, naming. Two rules needed a targeted
+fix rather than a blanket disable:
+- `ktlint_function_naming_ignore_when_annotated_with = Composable` -- Compose's own official style
+  guide mandates PascalCase for `@Composable` functions (`CompassDial`, not `compassDial`); without
+  this override ktlint's naming rule would flag every single composable in the codebase.
+- `ktlint_standard_max-line-length` is disabled entirely, specifically because it conflicts with
+  this project's own documented testing convention (docs/TESTING.md) of long, full-sentence
+  backtick test names -- wrapping those to fit a line limit would actively fight that convention.
+
+The remaining genuine issues (a handful of missing braces on single-line `if`/`else`, one
+mis-ordered import, a couple of missing final newlines) were fixed via `ktlint -F`, and the
+unused default-template `ExampleInstrumentedTest.kt` was deleted outright rather than reformatted,
+since it was already documented as unexercised boilerplate with zero value.
+
+If you add new ktlint rule violations and are tempted to just disable the rule: check first
+whether it's flagging something ktlint 1.x's default style prefers (probably fine to disable,
+following the pattern above) versus something that's a genuine, previously-consistent convention
+in this codebase getting broken by new code (fix the new code instead).
+
 ## Testing philosophy
 
 See **[docs/TESTING.md](TESTING.md)** — the canonical home for testing philosophy, the paired-test
@@ -312,10 +399,11 @@ Read it before adding, moving, or removing any test.
 ## Known limitations / open TODOs
 
 - No location-fix-unavailable messaging for true north (see "True north" above).
-- No Compose UI tests (only the default-template instrumented test exists, undeveloped) —
-  including no automated test coverage of the settings screen or the bearing-lock tap gesture.
-- No CI/GitHub Actions yet — planned (a debug-APK-per-commit workflow), not implemented. Don't
-  assume any workflow file exists or runs anything.
+- No Compose UI tests at all -- the default-template instrumented test was removed (see "CI
+  pipeline" below) since it was pure unexercised boilerplate; there is currently zero automated
+  coverage of the settings screen, the bearing-lock tap gesture, or any Canvas-drawn UI.
+- No CodeQL/ktlint/Jacoco baseline history yet to compare against -- this is genuinely the first
+  run of all of it (see "CI pipeline" below for what's actually wired up now).
 - The multi-orientation level (see above) is gone; if re-requested, treat it as a fresh design
   problem (6 modes, not 3) rather than restoring the deleted `TiltMath.kt` as-is.
 - The locked bearing does not persist across app restarts (by design so far — it's a session-scoped

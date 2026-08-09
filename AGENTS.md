@@ -9,7 +9,7 @@ writing or editing any code here.
 Before making any change, read, in this order:
 
 1. **[README.md](README.md)** — what the app is, how to build/run/test it, permissions, current
-   status (no CI as of writing).
+   status, and the CI pipeline (`.github/workflows/`).
 2. **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — package map, and critically, the "Design
    decisions and history" section. This documents bugs that were already found and fixed once
    (the compass spin-reset bug), features that were built, found to be broken, and deliberately
@@ -155,6 +155,8 @@ Before reporting a change as complete:
 - Run `./gradlew testDebugUnitTest` — fast, catches logic regressions.
 - Run `./gradlew assembleDebug` — catches Compose/resource/manifest compile errors that unit tests
   won't.
+- Run ktlint (see README's "Code style" section for the exact command) — CI enforces this on every
+  PR; a change that fails it locally will fail `ci.yml` too.
 - Neither of the above substitutes for running the app on a physical device for anything that's
   actually about feel — animation speed, haptic timing, visual centering/spacing, sensor
   responsiveness. If you haven't verified something on-device, say so explicitly rather than

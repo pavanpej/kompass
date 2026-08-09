@@ -90,7 +90,9 @@ class CompassSensorManager(context: Context) : SensorEventListener {
     private fun handleMagneticField(event: SensorEvent) {
         val magnitude = MagnetometerMath.magnitude(event.values[0], event.values[1], event.values[2])
         val previous = smoothedMagneticField
-        smoothedMagneticField = if (previous == null) magnitude else {
+        smoothedMagneticField = if (previous == null) {
+            magnitude
+        } else {
             previous + MAGNETIC_FIELD_SMOOTHING_FACTOR * (magnitude - previous)
         }
         _sensorData.value = _sensorData.value.copy(magneticFieldMicroTesla = smoothedMagneticField ?: magnitude)
@@ -99,7 +101,9 @@ class CompassSensorManager(context: Context) : SensorEventListener {
     private fun handlePressure(event: SensorEvent) {
         val pressureHpa = event.values[0]
         val previous = smoothedPressure
-        smoothedPressure = if (previous == null) pressureHpa else {
+        smoothedPressure = if (previous == null) {
+            pressureHpa
+        } else {
             previous + PRESSURE_SMOOTHING_FACTOR * (pressureHpa - previous)
         }
         val altitude = AltitudeMath.fromPressure(smoothedPressure ?: pressureHpa)

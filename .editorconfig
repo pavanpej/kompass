@@ -1,0 +1,31 @@
+root = true
+
+[*.{kt,kts}]
+indent_size = 4
+insert_final_newline = true
+
+# ktlint 1.x's default ruleset is opinionated about wrapping style (one parameter per line,
+# trailing commas everywhere, forced multiline expression breaks) in ways that don't match how
+# this codebase is actually written. Disabling those specific style-preference rules rather than
+# mass-reformatting the whole codebase to match them -- the rules kept enabled below (import
+# ordering, no wildcard imports, final newline, spacing/indentation, naming) catch real
+# consistency issues instead.
+ktlint_standard_function-signature = disabled
+ktlint_standard_class-signature = disabled
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_argument-list-wrapping = disabled
+ktlint_standard_trailing-comma-on-call-site = disabled
+ktlint_standard_trailing-comma-on-declaration-site = disabled
+ktlint_standard_no-empty-first-line-in-class-body = disabled
+ktlint_standard_function-expression-body = disabled
+ktlint_standard_chain-method-continuation = disabled
+ktlint_standard_if-else-wrapping = disabled
+# This project's testing convention (see docs/TESTING.md) is deliberately long, full-sentence
+# backtick test names -- wrapping those to fit a line-length limit would fight the convention.
+ktlint_standard_max-line-length = disabled
+# @Composable functions are PascalCase by Compose's own official style guide; ktlint's default
+# naming rule doesn't know about that convention without this override.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Color.kt is Compose's own template-generated name for the theme color file (KompassColors is
+# the type inside it) -- not worth a repo-wide import-path rename to satisfy this rule.
+ktlint_standard_filename = disabled

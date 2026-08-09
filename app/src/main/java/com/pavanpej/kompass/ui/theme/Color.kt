@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 object KompassColors {
     val TrueBlack = Color(0xFF000000)
     val Surface = Color(0xFF000000)
+
     /** A touch above true black, for small chrome (pills, banners) that needs to read as a distinct layer. */
     val SurfaceElevated = Color(0xFF1C1C1E)
 
