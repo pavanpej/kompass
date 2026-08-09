@@ -14,3 +14,8 @@ build/
 .externalNativeBuild
 .cxx
 local.properties
+
+# Signing -- never commit a real keystore, no matter where it's placed.
+*.jks
+*.keystore
+keystore.properties
