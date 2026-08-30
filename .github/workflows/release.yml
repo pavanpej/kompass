@@ -30,19 +30,30 @@ jobs:
           echo "name=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "code=${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      - name: Build signed release APK
+      - name: Build signed release APK + AAB
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          ./gradlew assembleRelease \
+          ./gradlew assembleRelease bundleRelease \
             -PreleaseVersionName="${{ steps.version.outputs.name }}" \
             -PreleaseVersionCode="${{ steps.version.outputs.code }}"
+
+      # AAB is what Play Console actually requires for upload; the APK stays attached too,
+      # for direct/sideload download from the GitHub Release itself.
+      - name: Upload AAB as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kompass-release-aab
+          path: app/build/outputs/bundle/release/app-release.aab
+          retention-days: 90
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/release/app-release.aab
           generate_release_notes: true

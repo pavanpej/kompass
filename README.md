@@ -136,7 +136,7 @@ comments before re-enabling any of them. Auto-fix most things with `./ktlint -F 
 |---|---|---|
 | [`ci.yml`](.github/workflows/ci.yml) | push to `main`, every PR | ktlint → Android Lint → unit tests → Jacoco coverage report (uploaded as an artifact) → `assembleDebug` → uploads the debug APK as a build artifact. A second job, PR-only, warns (doesn't block) if `AndroidManifest.xml` gains a new `<uses-permission>`, as a nudge to keep the table above honest. |
 | [`codeql.yml`](.github/workflows/codeql.yml) | push/PR to `main`, weekly | GitHub's CodeQL security scan for Kotlin/Java. Requires the repo to be public (or GitHub Advanced Security on a paid plan) — code scanning results-upload fails otherwise. |
-| [`release.yml`](.github/workflows/release.yml) | push of a `v*` tag | Builds a **signed** release APK (needs the four `RELEASE_KEYSTORE_*`/`RELEASE_KEY_*` repo secrets — see docs/ARCHITECTURE.md), derives `versionName`/`versionCode` from the tag, creates a GitHub Release with the APK attached and auto-generated notes. |
+| [`release.yml`](.github/workflows/release.yml) | push of a `v*` tag | Builds a **signed** release APK and AAB (needs the four `RELEASE_KEYSTORE_*`/`RELEASE_KEY_*` repo secrets — see docs/ARCHITECTURE.md), derives `versionName`/`versionCode` from the tag, creates a GitHub Release with both files attached (plus the AAB as a separate build artifact) and auto-generated notes. The AAB is what you upload to Play Console; the APK stays around for direct/sideload install. |
 
 [`.github/dependabot.yml`](.github/dependabot.yml) — monthly dependency-update PRs for Gradle
 (`libs.versions.toml`) and GitHub Actions versions.

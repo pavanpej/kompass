@@ -316,8 +316,12 @@ Four files, split by concern rather than one mega-workflow:
 - **`.github/workflows/codeql.yml`** — kept separate from `ci.yml` because it has its own
   independent schedule (push/PR to `main` *plus* a weekly cron), not just a push/PR trigger.
 - **`.github/workflows/release.yml`** — triggers on pushing a `v*` tag. Builds a **signed**
-  release APK and creates a GitHub Release with it attached. See "Release signing" below for how
-  signing actually works, and "Version-from-tag" for where `versionName`/`versionCode` come from.
+  release APK *and* AAB (`assembleRelease bundleRelease` in one Gradle invocation, so both share
+  the same signing config without building twice) and creates a GitHub Release with both attached
+  (the AAB is also uploaded separately as a build artifact). The AAB is what Play Console actually
+  requires for upload -- the APK is kept around for direct/sideload installs, since that's what
+  most people expect a GitHub Release asset to be. See "Release signing" below for how signing
+  actually works, and "Version-from-tag" for where `versionName`/`versionCode` come from.
 - **`.github/dependabot.yml`** — not a workflow (lives in `.github/`, not `.github/workflows/`),
   monthly-interval dependency PRs for both the `gradle` and `github-actions` ecosystems.
 
@@ -346,6 +350,10 @@ base64'd keystore to a file under the build directory and wires up signing for t
 build type. If they're absent (any local build, or a CI run without the secrets configured),
 `assembleRelease` still succeeds -- it just produces `app-release-unsigned.apk` instead of
 `app-release.apk` (verified locally: this is the actual AGP output-naming behavior, not a guess).
+`bundleRelease` (the AAB) behaves differently here -- it always names its output
+`app-release.aab` regardless of signed state (no `-unsigned` suffix convention like the APK has;
+also verified locally), so don't use the filename as a signal for whether an AAB is actually
+signed -- only the presence of the four env vars at build time determines that.
 `release.yml` is the only workflow that sets these, from four GitHub Actions repo secrets of the
 same names. The actual keystore file lives outside this repo entirely, on the maintainer's
 machine (backed up separately) -- **never commit a real keystore**; `.gitignore` blocks `*.jks`/
