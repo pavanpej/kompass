@@ -44,7 +44,7 @@ jobs:
       # AAB is what Play Console actually requires for upload; the APK stays attached too,
       # for direct/sideload download from the GitHub Release itself.
       - name: Upload AAB as a build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kompass-release-aab
           path: app/build/outputs/bundle/release/app-release.aab
